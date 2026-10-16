@@ -16,7 +16,7 @@ terraform -chdir=terraform init -backend=false
 terraform -chdir=terraform validate
 ```
 
-The current suite contains 35 tests. Without private-network configuration, 34 pass and one live integration test skips. Coverage includes state transitions, concurrent locking, interrupted updates/promotion, deterministic version reuse, Vault lifecycle polling and throttling, pagination, callback validation and the metrics ingestion endpoint.
+The current suite contains 37 tests. Without private-network configuration, 36 pass and one live integration test skips. Coverage includes state transitions, concurrent locking, interrupted updates/promotion, deterministic version reuse, Vault lifecycle polling and throttling, pagination, callback validation and the metrics ingestion endpoint.
 
 Failure-injection tests deliberately emit sanitized error logs; use the test runner's final result to determine success. Source guards are not a substitute for dependency or container vulnerability scanning.
 
@@ -52,7 +52,7 @@ The acceptance harness checks dry-run nonmutation, lock contention, an injected 
 
 Invoke `{"action":"validate"}` from an authorized operator. Then test the four documented callbacks and confirm the final version authenticates. Direct callback success does not prove Secret Service orchestration.
 
-For native acceptance, record CURRENT, select Rotate in Console, observe the callback logs and require a newer CURRENT, COMPLETE journal and fresh login. The current demo's native tests stop after VERIFY_CONNECTION with scheduling either enabled or disabled. This is an open acceptance issue, not a passing test. Periodic execution, a real Function hard-kill recovery drill, notification delivery and the customer's connection-pool refresh still require acceptance.
+For native acceptance, record CURRENT, select Rotate in Console, observe the callback logs and require a newer CURRENT, COMPLETE journal and fresh login. Version 0.1.1 passed this native test with scheduling disabled, advancing CURRENT from 5 to 6. Earlier versions returned `currentVersionNo` instead of the required `versionNo` and stalled after VERIFY_CONNECTION; the exact response-field contract is now regression-tested. Periodic execution, a real Function hard-kill recovery drill, notification delivery and the customer's connection-pool refresh still require acceptance.
 
 ## Security and release checks
 

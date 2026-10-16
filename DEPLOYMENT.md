@@ -1,6 +1,6 @@
 # Deployment guide
 
-This is an application-role rotation implementation candidate. Local rotation and directly invoked OCI Function callbacks were tested against PostgreSQL 17. Native Secret Service/Console rotation currently stops after successful VERIFY_CONNECTION; enabling scheduling did not resolve it. Do not enable unattended rotation until this acceptance issue is resolved. See [validation](docs/validation.md) and [security findings](SECURITY.md).
+This is an application-role rotation implementation candidate. Local rotation and directly invoked OCI Function callbacks were tested against PostgreSQL 17. Native Secret Service/Console rotation passed end-to-end in version 0.1.1 with periodic scheduling disabled. Complete scheduled-run and application acceptance before enabling unattended rotation. See [validation](docs/validation.md) and [security findings](SECURITY.md).
 
 ## Prerequisites
 
@@ -35,7 +35,7 @@ Build from the repository root, authenticate to OCIR using your own credentials,
 
 ```bash
 # Replace with your private OCIR repository.
-IMAGE='iad.ocir.io/YOUR_NAMESPACE/YOUR_REPOSITORY:0.1.0'
+IMAGE='iad.ocir.io/YOUR_NAMESPACE/YOUR_REPOSITORY:0.1.1'
 docker build --platform linux/amd64 -f functions/vault_rotation/Dockerfile -t "$IMAGE" .
 docker push "$IMAGE"
 docker image inspect "$IMAGE" --format '{{index .RepoDigests 0}}'
@@ -62,6 +62,6 @@ Set `function_id` from Terraform output and invoke the Function with `{"action":
 
 ## Console and scheduling
 
-See [Console rotation](docs/console-rotation.md) for Function-target binding and the unresolved native acceptance limitation. Keep automatic rotation disabled until native end-to-end validation passes. The `schedule --confirm` command enables periodic rotation; `unschedule --confirm` disables it. Do not treat an accepted Rotate request as proof of password rotation: confirm a newer CURRENT version, a COMPLETE journal and a fresh successful database login.
+See [Console rotation](docs/console-rotation.md) for Function-target binding and native acceptance checks. Keep automatic rotation disabled until your own native and application acceptance passes. The `schedule --confirm` command enables periodic rotation; `unschedule --confirm` disables it. Do not treat an accepted Rotate request as proof of password rotation: confirm a newer CURRENT version, a COMPLETE journal and a fresh successful database login.
 
 See [recovery](docs/recovery-runbook.md), [operations](docs/operations.md), and [IAM](docs/iam-policies.md) before operational handoff.

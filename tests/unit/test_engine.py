@@ -50,14 +50,28 @@ class EngineTests(unittest.TestCase):
     def test_native_protocol_and_duplicates(self):
         secret = "secret-id"
         result = callback(self.engine, secret, {"secretId": secret, "step": "VERIFY_CONNECTION"})
-        self.assertEqual(result["currentVersionNo"], 1)
+        self.assertEqual(result, {"responseCode": 200, "versionNo": 1, "returnMessage": "Verified"})
         for step in ("CREATE_PENDING_VERSION", "UPDATE_TARGET_SYSTEM", "PROMOTE_PENDING_VERSION"):
-            request = {"secretId": secret, "step": step, "versionNo": result["currentVersionNo"]}
-            result = callback(self.engine, secret, request)
+            request = {"secretId": secret, "step": step, "versionNo": result["versionNo"]}
+            result = json.loads(json.dumps(callback(self.engine, secret, request)))
+            self.assertEqual(set(result), {"responseCode", "versionNo", "returnMessage"})
             duplicate = callback(self.engine, secret, request)
             self.assertEqual(result, duplicate)
         self.assertEqual(self.db.changes, 1)
-        self.assertEqual(result["currentVersionNo"], 2)
+        self.assertEqual(result["versionNo"], 2)
+
+    def test_documented_input_alias_emits_native_response(self):
+        result = callback(self.engine, "s", {"secretId": "s", "step": "CREATE_PENDING_VERSION",
+                                             "currentVersionNo": 1})
+        self.assertEqual(result["versionNo"], 1)
+        self.assertNotIn("currentVersionNo", result)
+
+    def test_conflicting_version_aliases_rejected_before_mutation(self):
+        with self.assertRaises(RotationError):
+            callback(self.engine, "s", {"secretId": "s", "step": "CREATE_PENDING_VERSION",
+                                        "currentVersionNo": 1, "versionNo": 2})
+        self.assertIsNone(self.store.op)
+        self.assertEqual(self.db.changes, 0)
 
     def test_cannot_promote_without_verification(self):
         self.engine.run(stop="PREPARED")

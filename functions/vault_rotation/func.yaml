@@ -1,6 +1,6 @@
 schema_version: 20180708
 name: pg-vault-rotation
-version: 0.1.0
+version: 0.1.1
 runtime: docker
 memory: 256
 timeout: 300

@@ -20,6 +20,8 @@ The Function exposes the four native callbacks: VERIFY_CONNECTION, CREATE_PENDIN
 
 Do not run local rotation concurrently with a service-driven rotation. If an invocation is interrupted, inspect the journal and use the recovery runbook; never delete the pending version or reset the journal.
 
-## Current demo acceptance limitation
+## Version 0.1.1 native acceptance
 
-The deployed Function passes all four directly invoked callbacks. Native Rotate requests currently stop after successful VERIFY_CONNECTION with either automatic-rotation setting. A customer-approved temporary 360-day enablement test did not change that result and was reverted. Treat the Console workflow as an unresolved acceptance item, not a demonstrated end-to-end capability. Automatic rotation remains disabled; CURRENT version 5 and the completed journal remain consistent.
+Native Rotate completed all four callbacks with automatic rotation disabled. CURRENT advanced from 5 to 6, the journal reached COMPLETE, and an independent Function validation opened a fresh TLS login with CURRENT. The same Rotate API is used by the Console button; this was an API-level test, not a browser click test.
+
+The version 0.1.0 response used `currentVersionNo`, which the native orchestrator did not consume. Version 0.1.1 returns `versionNo`, matching the reference Function's output model. Input still accepts either spelling for compatibility. Scheduling was not the cause of the earlier stall and remains disabled after the successful test.

@@ -4,8 +4,8 @@ from rotation.model import RotationError
 def callback(engine, secret_id: str, payload: dict) -> dict:
     """Vault uses the verified pending version as input to the final callback.
 
-    Oracle's prose uses currentVersionNo; its sample POJO uses versionNo.
-    Accept either spelling, but reject conflicting values.
+    The native wire response uses versionNo. Some documentation calls the input
+    currentVersionNo; accept that input alias but always emit versionNo.
     """
     if payload.get("secretId") != secret_id:
         raise RotationError("Secret is not the configured target")
@@ -25,7 +25,7 @@ def callback(engine, secret_id: str, payload: dict) -> dict:
             valid = False
         if not valid:
             engine.db.preflight(engine.vault.password(current))
-        return {"responseCode": 200, "currentVersionNo": current, "returnMessage": "Verified"}
+        return {"responseCode": 200, "versionNo": current, "returnMessage": "Verified"}
     if step == "CREATE_PENDING_VERSION":
         op = engine.run(stop="PREPARED", expected=version if version is not None else engine.vault.current())
         output = op.current
@@ -45,4 +45,4 @@ def callback(engine, secret_id: str, payload: dict) -> dict:
         output = op.pending
     else:
         raise RotationError("Unsupported Vault rotation step")
-    return {"responseCode": 200, "currentVersionNo": output, "returnMessage": op.state}
+    return {"responseCode": 200, "versionNo": output, "returnMessage": op.state}

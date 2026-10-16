@@ -1,13 +1,13 @@
 # Customer handoff and acceptance
 
-Status: application-role implementation live-tested, 2026-10-15. Approved demo testing created a private versioned journal bucket and rotated `demo` on PostgreSQL 17 through Vault CURRENT version 4. Admin was unchanged. A later approved Console deployment created the Function, IAM, NSGs and logs; direct callbacks advanced CURRENT to 5. Native Console/API orchestration remains unresolved; no schedule was enabled. Customer identifiers and evidence stay in `.local/` outside this reusable package. See [validation](validation.md).
+Status: version 0.1.1 application-role path and native Console/API orchestration live-tested on 2026-10-15. CURRENT advanced to version 6 and a fresh TLS login passed. Admin was unchanged. The Function, IAM, NSGs and logs are deployed; automatic rotation is disabled. Customer-specific deployment files remain outside the reusable package. See [validation](validation.md).
 
 | PRD acceptance area | Evidence / remaining gate |
 |---|---|
 | Read-only discovery, region coverage | Exercised default profile, region subscriptions, accessible compartments and DB listing across Ashburn/Chicago; full inventory may contain explicit endpoint-access errors. |
 | Interactive selection | Guided CLI implemented; operator selected the discovered PostgreSQL 17 target in chat. Role, database, CA and Vault secret configured for local demo testing; Function image/deployment settings remain pending. |
-| App/manual rotation, repeated runs | Repeated approved live demo rotations passed; final CURRENT version 5 authenticates through the deployed Function. |
-| Scheduled rotation | Vault protocol and duplicate-callback tests pass; deployed direct callbacks pass; native Rotate stops after VERIFY_CONNECTION with scheduling either enabled or disabled. The approved temporary-enable test was reverted; automatic rotation remains disabled. Periodic scheduling remains untested. |
+| App/manual rotation, repeated runs | Repeated approved live demo rotations passed; final CURRENT version 6 authenticates through the deployed Function. |
+| Scheduled rotation | Vault protocol and duplicate-callback tests pass; deployed direct callbacks and native manual Rotate pass in 0.1.1. Automatic rotation remains disabled; periodic scheduling remains untested. |
 | Active secret authentication | Fresh TLS authentication with real Vault CURRENT passed, including the integration test. |
 | Concurrency and partial failure | Real lock contention and injected promotion interruption/recovery passed; other failure cases covered locally. |
 | Timeout recovery | Persistent-lock behavior and same-operation resume tested; hard-kill a real Function during acceptance and drill controlled unlock. |

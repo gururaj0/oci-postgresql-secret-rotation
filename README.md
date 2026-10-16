@@ -6,10 +6,10 @@ Customer-operated Python CLI, OCI Function, and Terraform modules for applicatio
 
 - [Deployment instructions](DEPLOYMENT.md)
 - [Testing and acceptance](TESTING.md)
-- [Console rotation and known limitation](docs/console-rotation.md)
+- [Console rotation](docs/console-rotation.md)
 - [Security](SECURITY.md) and [recovery](docs/recovery-runbook.md)
 
-**Prerelease:** native Console/API rotation remains unresolved. Do not enable unattended rotation until end-to-end acceptance passes.
+**Version 0.1.1:** native Console/API rotation passed end-to-end with scheduling disabled. This remains a prerelease pending scheduled-run, customer application and production security acceptance.
 
 ## What is implemented
 
@@ -45,9 +45,9 @@ Build/push the Function image as described in [installation](docs/installation.m
 
 ## Validation and release status
 
-The approved demo application-role rotation passed against OCI PostgreSQL 17 and Vault: repeated rotations, lock contention, interrupted promotion, same-operation recovery, surviving existing sessions and fresh CURRENT logins. All 34 tests passed, including the configured live integration test. See [validation evidence](docs/validation.md).
+The approved demo application-role rotation passed against OCI PostgreSQL 17 and Vault: repeated rotations, lock contention, interrupted promotion, same-operation recovery, surviving existing sessions and fresh CURRENT logins. The initial 34-test suite passed with live integration enabled. The current 37-test local suite passes with one opt-in private-network integration skip. See [validation evidence](docs/validation.md).
 
-The delivery includes a resolved hashed dependency lock and Terraform provider lock. Clean installation, Ruff, dependency audit (no known vulnerabilities) and Terraform provider validation passed. The demo Function is now deployed and its resource-principal validation and four direct callbacks passed. Native Console/API orchestration remains unresolved (VERIFY_CONNECTION succeeds but the service does not advance CURRENT with scheduling either enabled or disabled). Container scanning completed with unresolved OS findings. Scheduled execution, notification delivery, a real Function hard-kill drill and customer application pool refresh remain acceptance gates. See [Console rotation](docs/console-rotation.md).
+The delivery includes a resolved hashed dependency lock and Terraform provider lock. Clean installation, Ruff, dependency audit (no known vulnerabilities) and Terraform provider validation passed. The demo Function is now deployed and its resource-principal validation and four direct callbacks passed. Native Console/API rotation now passes: the Function returns the required `versionNo` response field, the service completes all four callbacks, and CURRENT authenticates a fresh TLS login. Container scanning retains unresolved OS findings. Periodic scheduled execution, notification delivery, a real Function hard-kill drill and customer application pool refresh remain acceptance gates. See [Console rotation](docs/console-rotation.md).
 
 Administrator rotation is deliberately disabled. The public reset API exists, but it needs separate asynchronous work-request, recovery and production-approval tests. Alternating-user rotation is also gated until role grants and application username refresh are validated. This release supports self-rotation of one application role; it does not promise uninterrupted new connections between password update and secret promotion.
 

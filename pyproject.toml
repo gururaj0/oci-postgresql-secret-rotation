@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "oci-postgresql-secret-rotation"
-version = "0.1.0"
+version = "0.1.1"
 description = "Customer-operated OCI Vault and PostgreSQL credential rotation"
 requires-python = ">=3.11"
 dependencies = ["oci==2.188.0", "psycopg[binary]==3.2.12", "PyYAML==6.0.3", "fdk==0.1.103"]

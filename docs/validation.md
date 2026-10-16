@@ -1,35 +1,26 @@
-# Implementation validation — 2026-10-15
+# Validation — 2026-10-15
 
-Approved demo testing targeted DemoPostgreSQL 17 in Ashburn, database `postgres`, application role `demo`. A private versioned journal bucket was created. Admin was unchanged. No Function or automatic schedule was deployed.
+## Current result: native Console/API rotation passes in 0.1.1
 
-## Passed
+The demo Function was updated with the corrected `versionNo` response field and tested through OCI Vault's native Rotate API, which backs the Console button. Automatic rotation stayed disabled throughout. Secret Service completed the four callbacks; CURRENT advanced from 5 to 6, the journal reached COMPLETE, and a separate Function validation verified a fresh PostgreSQL TLS login with CURRENT. Admin was unchanged. This was an API-level test, not a browser click test.
 
-- 34 tests in the clean installed environment, including the real TLS/database integration test; no skips.
-- Exact runtime SDK 2.188.0, resolved transitive hash lock installation and package/CLI installation in a fresh virtual environment.
-- Ruff, source security guards, Python compilation, configuration checks and shell syntax checks.
-- Terraform formatting and provider schema validation with locked OCI provider 9.9.0.
-- Dependency audit of the resolved lock: no known vulnerabilities found. This does not replace container scanning.
-- Repeated real application-role rotation through Vault versions 1 → 2 → 3 → 4. Final state COMPLETE; a separate fresh TLS login with CURRENT version 4 passed.
-- Seven live acceptance checks: dry-run without mutation; competing lock rejected; database updated while Vault promotion was deliberately interrupted; existing database session survives; recovery reuses the same operation and pending version; refreshed CURRENT opens a new connection; journal contains neither tested password.
+The root cause was a wire-response mismatch: version 0.1.0 emitted `currentVersionNo`. The [reference Java Function](https://github.com/tstahl/oci-rotate-secret-fn/blob/06b55ddd45daa8e86f5cbdfdf791071721b37099/src/main/java/com/oracle/bmc/ocisms/fn/CustomRotateFunction.java) emits `versionNo`. Our earlier unit test renamed the response field before submitting the next callback, hiding the interoperability defect. Tests now assert the exact response fields and round-trip the native version field without renaming it. The reference's OAuth-specific credential logic was not copied into this PostgreSQL implementation.
 
-Promotion interruption was injected in the local adapter, not by modifying remote IAM. The recovery operation completed in about 17 seconds. Live service behavior also exposed asynchronous Vault updates and throttling; bounded lifecycle polling and HTTP 429 retries were added and tested. Unknown write outcomes are still reconciled rather than blindly retried.
+## Executed checks
 
-Sanitized customer-specific evidence is outside the reusable package in `.local/live-acceptance.json`, `.local/live-test-summary.json` and `.local/dependency-audit.json`. The temporary SSH tunnel was closed after final verification. The initial demo password is no longer current; retrieve credentials from Vault.
+- Current local suite: 37 tests, 36 pass and one opt-in private-network integration skip. New cases verify the wire response, compatibility input alias and rejection of conflicting version fields.
+- Initial configured live suite: all 34 then-existing tests passed, including private-network integration.
+- Ruff, source security guards and Terraform formatting passed. Exact SDK 2.188.0, resolved hash-lock clean installation and provider 9.9.0 schema validation passed during initial acceptance.
+- Repeated real local rotations, concurrency rejection, injected interrupted-promotion recovery using the same operation/version, surviving existing sessions, refreshed CURRENT login and journal password-exclusion checks passed.
+- Deployed resource-principal Function validation and four direct callbacks passed. Version 0.1.1 additionally passed native orchestration with scheduling disabled.
+- Runtime dependency audit found no known vulnerabilities at the recorded scan date. Container scanning retains OS findings; see SECURITY.md. These are separate checks.
+
+## Earlier diagnosis, now resolved
+
+Version 0.1.0 native requests stopped after successful VERIFY_CONNECTION. A separately approved temporary 360-day enablement test produced the same result; automatic rotation was immediately disabled again. The successful 0.1.1 test confirms the response-field correction resolves native orchestration without enabling scheduling.
+
+Customer-specific evidence is excluded from the public release. Local evidence includes `.local/console-deployment/native-rotation-0.1.1.json`, deployment plans/state, image digests and scan reports. Preserve the deployment state to manage customer resources.
 
 ## Remaining gates
 
-Deploy and test the OCI Function with resource-principal IAM and private networking; exercise native Vault scheduling, monitoring and notification delivery; hard-kill a real Function and drill controlled lock recovery; build/scan the container; validate the customer's actual application pool/cache refresh. Administrator and alternating-user strategies remain disabled and require separate implementation. This validates the application-role path, not the entire PRD or production readiness.
-
-## Console deployment follow-up — 2026-10-15
-
-Deployed `pg-rotation-demo17` in Demo/Ashburn as an ARM Function with a private OCIR image, dedicated Function/database NSGs, secret-scoped dynamic groups/policy and invocation logging. Attached the database NSG without replacing existing access rules. Linked the secret to the Function with periodic rotation disabled.
-
-Resource-principal validation and all four directly invoked Function callbacks passed: CURRENT advanced from 4 to 5, with a COMPLETE journal and verified database authentication. Two native Rotate API requests were accepted, invoked VERIFY_CONNECTION successfully, then returned to NOT_ENABLED without advancing CURRENT. Console orchestration acceptance remains unresolved; direct callback success is not equivalent to native rotation success.
-
-Fixed OCI's separate image/digest API fields, the Monitoring SDK endpoint assignment and callback-stage diagnostics. The updated local suite has 35 tests (34 pass, one private-network integration skip); the deployed Function supplies additional real private-network validation. The final image was scanned: 44 HIGH, 58 MEDIUM, 61 LOW and one UNKNOWN OS-package findings, no CRITICAL findings or listed fixes; no Python-package findings. Production security acceptance remains open.
-
-Deployment plans/state, image digests, scan results and sanitized callback evidence are in `.local/console-deployment/`. Preserve this directory to manage the deployed resources. No automatic rotation or monitoring schedule was created.
-
-## Approved temporary-enable test — 2026-10-15
-
-Temporarily enabled automatic rotation with a 360-day interval, submitted one native Rotate request, and restored the original 30-day interval with automatic rotation disabled in cleanup. The service accepted the request (HTTP 202), completed VERIFY_CONNECTION, and returned to SCHEDULED without creating a pending version or advancing CURRENT. After cleanup, automatic rotation was disabled and CURRENT remained 5. The enablement flag does not explain the observed behavior; native Console orchestration remains unresolved with either setting. Evidence: `.local/console-deployment/native-enabled-test.json`.
+Periodic scheduled execution, notification delivery, hard-kill recovery of a real Function, and customer application connection-pool/cache refresh remain acceptance items. Container OS findings require production security review. Administrator and alternating-user strategies remain disabled and need separate implementation. The application-role path is live-tested; this does not imply complete PRD or production acceptance.
