@@ -13,6 +13,41 @@ This package includes the rotation Function, infrastructure deployment, configur
 
 Manual rotation through OCI Secret Service has been tested successfully: it updates the PostgreSQL password and Vault secret, then verifies a new database connection.
 
+## Deployment architecture
+
+The rotation Function connects to PostgreSQL over the private VCN. OCI Vault holds the credential versions, and your application retrieves the CURRENT version for new database connections.
+
+```mermaid
+flowchart TD
+    Vault["OCI Vault / Secret Service"]
+    App["Your application"]
+    Journal["Object Storage recovery journal"]
+    Monitor["OCI Resource Scheduler<br/>Every 15 minutes"]
+    Logs["OCI Logging and Monitoring"]
+    Alerts["Optional alarms and notifications"]
+
+    subgraph VCN["Private VCN connectivity"]
+        Fn["OCI Function<br/>Password rotation"]
+        DB["OCI Database with PostgreSQL"]
+        Fn -->|"Update password and verify a new TLS login"| DB
+    end
+
+    Vault -->|"Rotate button or enabled Vault schedule"| Fn
+    Fn -->|"Create PENDING version; promote after verification"| Vault
+    Fn -->|"Record progress and coordinate recovery"| Journal
+    Monitor -.->|"Health check only"| Fn
+    Fn -->|"Execution logs and health metrics"| Logs
+    Logs -.-> Alerts
+    App -->|"Retrieve CURRENT credential"| Vault
+    App -->|"Connect with refreshed credentials"| DB
+```
+
+For each rotation, the Function saves a pending credential in Vault, updates the database password, and tests a new connection. Only after that check succeeds does it make the new Vault version CURRENT. The application must refresh its cached credentials for new connections.
+
+The Function uses an OCI resource principal with IAM policies scoped to the selected secret and recovery journal. Database connections use verified TLS and require the private network access described in the [deployment guide](DEPLOYMENT.md).
+
+**Two schedules serve different purposes:** OCI Vault controls automatic password rotation, enabled after testing. The deployed 15-minute Resource Scheduler job checks rotation health and does not change passwords. See [architecture details](docs/architecture.md) for recovery and operational considerations.
+
 ## What deployment creates
 
 | Component | What it does | Deployment behavior |
