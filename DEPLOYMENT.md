@@ -1,4 +1,6 @@
-# Deployment guide
+# CLI deployment guide
+
+For a browser-based deployment with no laptop tools or deployment VM, use the [Resource Manager button and guide](docs/resource-manager.md). The instructions below are the alternative CLI workflow.
 
 Deploy the rotation Function and monitoring resources into your OCI tenancy, verify a manual password rotation, then enable automatic password rotation when your application is ready.
 

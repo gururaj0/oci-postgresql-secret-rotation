@@ -1,0 +1,92 @@
+schemaVersion: 1.1.0
+version: '20261015'
+locale: en
+title: PostgreSQL password rotation with OCI Vault
+description: Build and deploy a private rotation Function for your existing PostgreSQL database and Vault secret.
+variableGroups:
+  - title: Deployment location
+    variables: [compartment_ocid, name]
+  - title: Existing database and credential
+    variables: [db_system_id, database, username, secret_id]
+  - title: Private network
+    variables: [subnet_id, db_nsg_id]
+  - title: Rotation and monitoring
+    variables: [enable_automatic_rotation, rotation_days, notification_topic_id]
+  - title: Advanced
+    variables: [build_revision]
+  - title: Resource Manager context
+    visible: false
+    variables: [tenancy_ocid, region]
+variables:
+  tenancy_ocid:
+    type: string
+    visible: false
+  region:
+    type: string
+    visible: false
+  compartment_ocid:
+    type: oci:identity:compartment:id
+    title: Deployment compartment
+    required: true
+  name:
+    type: string
+    title: Unique deployment name
+    description: Also names the private OCIR repository and journal bucket. Use a new name for each deployment.
+    required: true
+  db_system_id:
+    type: string
+    title: PostgreSQL DB system OCID
+    description: Select an existing ACTIVE database in this compartment and region.
+    required: true
+  database:
+    type: string
+    title: Database name
+    required: true
+  username:
+    type: string
+    title: Application login role
+    description: Existing role whose username and current password are stored in the selected Vault secret. Do not enter the managed administrator.
+    required: true
+  secret_id:
+    type: string
+    title: Existing Vault secret OCID
+    description: Source secret in this region containing JSON with exactly username and password. Enter its OCID, never its password.
+    required: true
+  subnet_id:
+    type: string
+    title: Private Function subnet OCID
+    description: In the database's VCN, with DNS and routes to OCI APIs and OCIR through service gateway/NAT.
+    required: true
+  db_nsg_id:
+    type: string
+    title: Database network security group OCID
+    description: Must already be attached to this database. The stack adds one ingress rule from its Function NSG to the PostgreSQL port.
+    required: true
+  enable_automatic_rotation:
+    type: boolean
+    title: Enable automatic password rotation
+    description: Leave off for initial manual testing. After application testing, enable and Apply again. Console Rotate is configured in either case.
+  rotation_days:
+    type: integer
+    title: Password rotation interval (days)
+    minimum: 1
+    maximum: 360
+  notification_topic_id:
+    type: string
+    title: Notifications topic OCID (optional)
+    description: Provide a topic with confirmed subscriptions to create alarms.
+  build_revision:
+    type: string
+    title: Image rebuild revision
+    description: Increment to rebuild the image when refreshing base-image security updates.
+outputs:
+  function_id:
+    title: Rotation Function OCID
+  function_image:
+    title: Deployed image digest
+  secret_id:
+    title: Vault secret OCID
+  automatic_rotation_enabled:
+    title: Automatic password rotation enabled
+  next_step:
+    title: Next step

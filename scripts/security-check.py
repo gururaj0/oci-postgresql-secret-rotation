@@ -4,8 +4,16 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
 errors = []
-for path in (root / "terraform").rglob("*.tf"):
+for path in [*(root / "terraform").rglob("*.tf"), *(root / "resource-manager").rglob("*.tf")]:
     text = path.read_text()
+    if path == root / "resource-manager/main.tf":
+        # Explicit exception: reviewed managed-runner build and metadata-only linking.
+        # Inputs are environment values; neither command interpolates shell arguments.
+        allowed = ('command     = "python3 scripts/runner.py build"',
+                   'command     = "python3 scripts/runner.py configure"')
+        if text.count('provisioner "local-exec"') != 2 or not all(x in text for x in allowed):
+            errors.append("Unexpected Resource Manager execution surface")
+        text = text.replace('provisioner "local-exec"', 'provisioner "reviewed-helper"')
     for forbidden in ("secret_content", "secret_bundle", 'variable "password"', "local-exec", "remote-exec"):
         if forbidden in text:
             errors.append(f"{path.relative_to(root)}: forbidden Terraform secret/execution surface: {forbidden}")

@@ -1,5 +1,7 @@
 # Installation and approval sequence
 
+For browser-only installation, use the [Resource Manager deployment guide](resource-manager.md). The sequence below applies to the alternative CLI deployment.
+
 Start with [choosing your deployment host](../DEPLOYMENT.md#choose-your-deployment-host) and the [task/location table](../DEPLOYMENT.md#tasks-and-where-to-run-them). An OCI Compute VM with private database access is recommended; a laptop with VPN or an SSH tunnel is also supported. Run installation and Terraform on that host. Download the database CA using the [certificate instructions](../DEPLOYMENT.md#obtain-the-postgresql-ca-certificate); no certificate or private-key generation is required.
 
 1. Use an OCI-authenticated customer host with Python 3.11+ and private database connectivity. Confirm the intended default profile locally; do not copy its keys into this repository or into Functions. Run `install.sh`, then activate `.venv`. For restricted environments, install the release's resolved hash lock from an approved wheel mirror.

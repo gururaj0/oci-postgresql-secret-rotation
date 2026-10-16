@@ -4,6 +4,16 @@ Keep an application’s PostgreSQL password and its OCI Vault secret in sync. Ro
 
 This package includes the rotation Function, infrastructure deployment, configuration tools, testing instructions and recovery procedures.
 
+## Deploy in your tenancy
+
+Use the **Resource Manager deployment button** to open the OCI Console stack wizard. Select your existing database, credential secret and private network, then review and Apply. Terraform and the image build run in OCI; customers need only a browser.
+
+[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https%3A%2F%2Fgithub.com%2Fgururaj0%2Foci-postgresql-secret-rotation%2Freleases%2Fdownload%2Fresource-manager-v0.1.0-rc.1%2Fresource-manager.zip)
+
+**Release candidate:** the Resource Manager package has passed static validation, automated helper tests and a read-only tenancy plan. End-to-end managed Apply is pending. See the [browser deployment guide](docs/resource-manager.md) for prerequisites, customer steps and validation status.
+
+The stack retrieves the CA certificate, builds/pushes a private image, deploys the Function and monitoring resources, verifies a fresh database login and links the secret for Console rotation. Automatic password rotation is an explicit form option, disabled by default for initial testing.
+
 ## What you can do
 
 - Rotate an application database password through OCI Secret Service or the included CLI.
@@ -52,25 +62,27 @@ The Function uses an OCI resource principal with IAM policies scoped to the sele
 
 | Component | What it does | Deployment behavior |
 |---|---|---|
-| OCI Function and application | Update the database password, verify it and update the Vault secret | Created from the image you build and publish |
+| OCI Function and application | Update the database password, verify it and update the Vault secret | Resource Manager builds/publishes the image; the CLI path uses your prebuilt image |
 | Monitoring schedule | Invoke the Function every 15 minutes to report rotation health | Created and enabled; these checks do not change passwords |
 | IAM policies and dynamic groups | Allow the Function to access the selected secret and recovery journal | Created |
 | Private, versioned journal bucket | Record progress so interrupted rotations can be resumed | Created by default; an existing bucket can be used |
 | Invocation logs | Help operators track execution and investigate failures | Created and enabled |
 | Monitoring alarms | Report failures, overdue rotation and missing monitoring activity | Created when you provide a Notifications topic |
-| Automatic password-rotation schedule | Have OCI Vault invoke the Function at the configured interval | Enabled separately after validation with `schedule --confirm` |
+| Automatic password-rotation schedule | Have OCI Vault invoke the Function at the configured interval | Resource Manager form option; CLI path uses `schedule --confirm` |
 
-Use an existing PostgreSQL database, application role, credential secret and suitable private subnet. Follow the deployment guide to build the container image, configure database access and supply the trusted CA certificate.
+Use an existing PostgreSQL database, application role, credential secret and suitable private network. The [Resource Manager guide](docs/resource-manager.md) explains the form and required network access.
 
-## Where to run the setup
+## Alternative: deploy from a VM or laptop
 
-**Recommended: use an OCI Compute VM with private network access to PostgreSQL as your deployment host.** SSH to that VM and run installation, configuration, image build/push, Terraform deployment and live CLI tests from the cloned repository. The VM needs the tools and OCI permissions listed in the [deployment guide](DEPLOYMENT.md#choose-your-deployment-host).
+For the CLI deployment path, use an OCI Compute VM with private network access to PostgreSQL as your deployment host. SSH to that VM and run installation, configuration, image build/push, Terraform deployment and live CLI tests from the cloned repository. The VM needs the tools and OCI permissions listed in the [deployment guide](DEPLOYMENT.md#choose-your-deployment-host).
 
 A laptop also works when it has the required tools, OCI credentials and database connectivity through a VPN or SSH tunnel. Terraform runs on whichever deployment host you choose. After deployment, OCI Functions performs rotations and OCI manages the schedules; the deployment host does not need to stay running. Preserve its Terraform state and configuration for future updates.
 
 See the [task and execution-location table](DEPLOYMENT.md#tasks-and-where-to-run-them) for the complete workflow, including downloading the database CA certificate and testing the rotated password.
 
-## Get started
+## CLI deployment steps
+
+For browser deployment, follow [Resource Manager](docs/resource-manager.md) instead.
 
 1. Follow [Deployment](DEPLOYMENT.md) to install the tools, configure your target, build the image and deploy the resources.
 2. Follow [Testing](TESTING.md) to verify manual rotation and confirm your application refreshes credentials for new connections.
@@ -97,7 +109,8 @@ This is a prerelease. Validate scheduled execution, application connection-pool 
 
 ## Documentation
 
-- [Deployment instructions](DEPLOYMENT.md)
+- [Browser deployment with Resource Manager](docs/resource-manager.md)
+- [CLI deployment instructions](DEPLOYMENT.md)
 - [Testing and acceptance](TESTING.md)
 - [Console rotation](docs/console-rotation.md)
 - [Operations](docs/operations.md) and [recovery](docs/recovery-runbook.md)
