@@ -1,0 +1,5 @@
+# Direct runtime pins; use requirements.resolved.lock for hashed installation.
+oci==2.188.0
+psycopg[binary]==3.2.12
+PyYAML==6.0.3
+fdk==0.1.103

@@ -1,0 +1,9 @@
+include LICENSE README.md DEPLOYMENT.md TESTING.md CHANGELOG.md SECURITY.md requirements.lock requirements-dev.txt config.example.yaml install.sh uninstall.sh
+include requirements.resolved.lock
+include terraform/.terraform.lock.hcl
+recursive-include docs *.md
+recursive-include terraform *.tf
+recursive-include functions *.py *.yaml Dockerfile
+recursive-include scripts *.py *.sh
+recursive-include tests *.py
+global-exclude *.pyc
