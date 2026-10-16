@@ -62,6 +62,14 @@ The Function uses an OCI resource principal with IAM policies scoped to the sele
 
 Use an existing PostgreSQL database, application role, credential secret and suitable private subnet. Follow the deployment guide to build the container image, configure database access and supply the trusted CA certificate.
 
+## Where to run the setup
+
+**Recommended: use an OCI Compute VM with private network access to PostgreSQL as your deployment host.** SSH to that VM and run installation, configuration, image build/push, Terraform deployment and live CLI tests from the cloned repository. The VM needs the tools and OCI permissions listed in the [deployment guide](DEPLOYMENT.md#choose-your-deployment-host).
+
+A laptop also works when it has the required tools, OCI credentials and database connectivity through a VPN or SSH tunnel. Terraform runs on whichever deployment host you choose. After deployment, OCI Functions performs rotations and OCI manages the schedules; the deployment host does not need to stay running. Preserve its Terraform state and configuration for future updates.
+
+See the [task and execution-location table](DEPLOYMENT.md#tasks-and-where-to-run-them) for the complete workflow, including downloading the database CA certificate and testing the rotated password.
+
 ## Get started
 
 1. Follow [Deployment](DEPLOYMENT.md) to install the tools, configure your target, build the image and deploy the resources.

@@ -1,5 +1,7 @@
 # Testing guide
 
+Use the [deployment task/location table](DEPLOYMENT.md#tasks-and-where-to-run-them) to choose where to run each check. An OCI Compute VM with private database connectivity is the recommended host for live CLI tests. Unit tests can run on a laptop. Console-triggered rotation executes in the deployed Function; verify application credential refresh from the application environment.
+
 ## Local tests without cloud access
 
 From the repository root, install the runtime and development dependencies:
