@@ -4,7 +4,7 @@ For a browser-based deployment with no laptop tools or deployment VM, use the [R
 
 Deploy the rotation Function and monitoring resources into your OCI tenancy, verify a manual password rotation, then enable automatic password rotation when your application is ready.
 
-The standard Terraform deployment creates the Function, its application, IAM policies, invocation logs, a journal bucket by default, and an active monitoring schedule that runs every 15 minutes. Alarms are included when a Notifications topic is configured. Automatic password rotation is activated separately through OCI Vault in the final step below.
+The standard Terraform deployment creates the Function, its application, IAM policies, invocation logs, a journal bucket by default, and an active monitoring schedule that runs every hour. Alarms are included when a Notifications topic is configured. Automatic password rotation is activated separately through OCI Vault in the final step below.
 
 Manual rotation has been tested successfully against PostgreSQL 17. Follow the [testing guide](TESTING.md) and review [security findings](SECURITY.md) before production use.
 
@@ -32,7 +32,7 @@ Use one deployment host and repository checkout for the initial workflow. After 
 | Link the Function and enable/disable rotation scheduling | Deployment host using the CLI and OCI API access | Configure the secret's rotation target and native Vault schedule |
 | Select **Rotate** | OCI Console in your browser | Ask Secret Service to invoke the deployed Function |
 | Update the password and verify it during hosted rotation | OCI Function, automatically | Connect to PostgreSQL privately and promote the verified Vault version |
-| Check automatic rotation and monitoring | OCI Vault and Resource Scheduler, automatically | Vault triggers password rotation; the separate 15-minute job checks health |
+| Check automatic rotation and monitoring | OCI Vault and Resource Scheduler, automatically | Vault triggers password rotation; the separate hourly job checks health |
 | Verify application credential refresh | Your application's runtime environment | Fetch CURRENT and open a new database connection |
 
 ## Prerequisites
@@ -128,7 +128,7 @@ pg-vault-rotation --config rotation.function.yaml unschedule --confirm
 pg-vault-rotation --config rotation.function.yaml status
 ```
 
-The 15-minute monitoring schedule remains active. To change the password-rotation interval, update `rotation_days` and rerun `schedule --confirm`.
+The hourly monitoring schedule remains active. To change the password-rotation interval, update `rotation_days` and rerun `schedule --confirm`.
 
 ## Rotate on demand
 

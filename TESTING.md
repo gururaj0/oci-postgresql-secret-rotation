@@ -18,7 +18,7 @@ terraform -chdir=terraform init -backend=false
 terraform -chdir=terraform validate
 ```
 
-The current suite contains 44 tests. Without private-network configuration, 43 pass and one live integration test skips. Coverage includes state transitions, concurrent locking, interrupted updates/promotion, deterministic version reuse, Vault lifecycle polling and throttling, pagination, callback validation and the metrics ingestion endpoint.
+The current suite contains 46 tests. Without private-network configuration, 45 pass and one live integration test skips. Coverage includes state transitions, concurrent locking, interrupted updates/promotion, deterministic version reuse, Vault lifecycle polling and throttling, pagination, callback validation and the metrics ingestion endpoint.
 
 Failure-injection tests deliberately emit sanitized error logs; use the test runner's final result to determine success. Source guards are not a substitute for dependency or container vulnerability scanning.
 

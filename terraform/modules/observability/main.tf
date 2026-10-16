@@ -52,7 +52,7 @@ resource "oci_monitoring_alarm" "monitor_missing" {
   metric_compartment_id = var.compartment_id
   display_name          = "${var.name}-monitor-missing"
   namespace             = "pg_vault_rotation"
-  query                 = "MonitorHeartbeat[1m].absent(1h)"
+  query                 = "MonitorHeartbeat[1m].absent(2h)"
   severity              = "CRITICAL"
   is_enabled            = true
   destinations          = [var.notification_topic_id]

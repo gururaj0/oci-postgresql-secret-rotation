@@ -2,9 +2,9 @@
 
 Use this stack to deploy the rotation integration into your own tenancy for an **existing PostgreSQL database and Vault credential secret**. Terraform runs on OCI Resource Manager's managed host. You do not install Terraform, Python or Docker on your laptop, create a deployment VM, build an image manually or download a CA certificate.
 
-**Release candidate:** the package passes local Terraform validation, a read-only plan against the demo tenancy, and automated helper tests. The signed OCIR token exchange has been tested. An end-to-end Apply on the managed Resource Manager runner is still required before customer acceptance. Existing native password rotation was tested separately; it does not establish that this new deployment path works end to end.
+**Validated preview:** managed Resource Manager Apply passed in the demo tenancy, including image build/push, automatic Function architecture selection, fresh TLS login and linking the secret with automatic rotation disabled. The hourly monitor executed successfully and the final repeat plan reported no changes. The test preserved the database password. Repeat manual rotation and application credential-refresh acceptance in your own environment before enabling automatic password rotation. See [validation details](validation.md).
 
-[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https%3A%2F%2Fgithub.com%2Fgururaj0%2Foci-postgresql-secret-rotation%2Freleases%2Fdownload%2Fresource-manager-v0.1.0-rc.1%2Fresource-manager.zip)
+[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https%3A%2F%2Fgithub.com%2Fgururaj0%2Foci-postgresql-secret-rotation%2Freleases%2Fdownload%2Fresource-manager-v0.1.0-rc.2%2Fresource-manager.zip)
 
 ## Before you click
 
@@ -24,7 +24,7 @@ Use a unique deployment name. Do not deploy another independent rotation integra
 1. Select **Deploy to Oracle Cloud** above. Sign in to the intended tenancy and select the deployment region. The button opens **Create stack** with the release ZIP selected.
 2. Choose Terraform **1.5.x** and name the stack.
 3. Complete the form: deployment compartment and name, DB system OCID, database name, application role, existing secret OCID, private subnet OCID and database NSG OCID. The tenancy and region come from Resource Manager.
-4. Leave **Enable automatic password rotation** off for initial testing. The separate 15-minute health monitor is deployed and enabled regardless of this setting.
+4. Leave **Enable automatic password rotation** off for initial testing. The separate hourly health monitor is deployed and enabled regardless of this setting.
 5. Review the selected resources, IAM changes and costs. Select **Run apply** and create the stack, or create it first and review a Plan job before starting Apply.
 6. Wait for the Apply job to succeed. The job builds the image, so the first deployment can take several minutes. Review its outputs for the Function OCID, image digest and selected secret.
 7. Open the selected Vault secret in OCI Console and select **Rotate**. Confirm a newer CURRENT version and test a fresh application login using that credential. Applications must refresh cached credentials for new connections.
@@ -39,13 +39,17 @@ Turning automatic rotation off and applying again disables the native Vault sche
 | Choose resources and start deployment | Customer's browser, OCI Console |
 | Terraform plan/apply and managed state | OCI Resource Manager |
 | Retrieve the database's public CA certificate | Terraform reads OCI PostgreSQL connection details |
-| Build and push the container image | Docker on the Resource Manager job host; private OCIR repository in the customer tenancy |
+| Build and push the container image | Docker-compatible builder on the Resource Manager job host; private OCIR repository in the customer tenancy |
 | Authenticate the image push | Temporary OCIR token obtained using the job's OCI identity; no user auth token input |
 | Validate the current password with a fresh TLS login | Deployed OCI Function, inside the private network |
 | Link the secret and optionally enable automatic rotation | Apply helper on the Resource Manager host, after Function validation |
 | Rotate the database password and promote the Vault version | OCI Function invoked by Secret Service |
 | Trigger automatic password rotation | OCI Vault's native schedule |
-| Check rotation health every 15 minutes | OCI Resource Scheduler invokes the Function's monitor action |
+| Check rotation health every hour | OCI Resource Scheduler invokes the Function's monitor action |
+
+The monitor runs hourly because [Resource Scheduler permits intervals of at least one hour](https://docs.oracle.com/en-us/iaas/Content/resource-scheduler/tasks/create-manage.htm). Its missing-heartbeat alarm uses a two-hour window.
+
+The image is built for the managed host’s native architecture. The stack reads the published image metadata and selects a matching ARM or x86 Function shape automatically.
 
 ## Created resources and existing resources
 

@@ -1,4 +1,6 @@
 import importlib.util
+import contextlib
+import io
 import json
 import os
 from pathlib import Path
@@ -38,6 +40,27 @@ class ResourceManagerTests(unittest.TestCase):
                 self.assertNotIn('../terraform/', z.read('main.tf').decode())
                 for name in names:
                     self.assertFalse(any(x in name for x in ('.local/', '.git/', '.tfstate', '.tfvars', '.pem', '__pycache__')))
+
+    def test_inspection_returns_only_public_architecture_metadata(self):
+        query = {'region': 'us-test-1', 'image': 'iad.ocir.io/test/rotation:v1@sha256:' + 'a' * 64}
+        calls = []
+        def run(args, **kwargs):
+            calls.append((args, kwargs))
+            return 'arm64\n' if args[1:3] == ['image', 'inspect'] else ''
+        output = io.StringIO()
+        with patch.object(runner.sys, 'stdin', io.StringIO(json.dumps(query))), \
+                patch.object(runner, 'raw', return_value=({'token': 'private-test-token'}, {})), \
+                patch.object(runner, 'run', side_effect=run), contextlib.redirect_stdout(output):
+            runner.inspect_image()
+        self.assertEqual(json.loads(output.getvalue()), {'architecture': 'arm64', 'shape': 'GENERIC_ARM'})
+        self.assertNotIn('private-test-token', json.dumps([args for args, _ in calls]))
+        self.assertTrue(all(not Path(kwargs['env']['DOCKER_CONFIG']).exists() for _, kwargs in calls))
+
+    def test_function_shape_matches_image_architecture(self):
+        self.assertEqual(runner.image_shape('arm64'), 'GENERIC_ARM')
+        self.assertEqual(runner.image_shape('amd64'), 'GENERIC_X86')
+        with self.assertRaises(runner.DeploymentError):
+            runner.image_shape('s390x')
 
     def test_existing_target_and_replica_are_rejected(self):
         for secret in [

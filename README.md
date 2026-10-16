@@ -8,9 +8,9 @@ This package includes the rotation Function, infrastructure deployment, configur
 
 Use the **Resource Manager deployment button** to open the OCI Console stack wizard. Select your existing database, credential secret and private network, then review and Apply. Terraform and the image build run in OCI; customers need only a browser.
 
-[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https%3A%2F%2Fgithub.com%2Fgururaj0%2Foci-postgresql-secret-rotation%2Freleases%2Fdownload%2Fresource-manager-v0.1.0-rc.1%2Fresource-manager.zip)
+[![Deploy to Oracle Cloud](https://oci-resourcemanager-plugin.plugins.oci.oraclecloud.com/latest/deploy-to-oracle-cloud.svg)](https://cloud.oracle.com/resourcemanager/stacks/create?zipUrl=https%3A%2F%2Fgithub.com%2Fgururaj0%2Foci-postgresql-secret-rotation%2Freleases%2Fdownload%2Fresource-manager-v0.1.0-rc.2%2Fresource-manager.zip)
 
-**Release candidate:** the Resource Manager package has passed static validation, automated helper tests and a read-only tenancy plan. End-to-end managed Apply is pending. See the [browser deployment guide](docs/resource-manager.md) for prerequisites, customer steps and validation status.
+**Validated preview:** Resource Manager deployment has passed in a demo tenancy, including managed image build/push, a fresh database login and scheduled health monitoring. See the [browser deployment guide](docs/resource-manager.md) for prerequisites, customer steps and acceptance checks.
 
 The stack retrieves the CA certificate, builds/pushes a private image, deploys the Function and monitoring resources, verifies a fresh database login and links the secret for Console rotation. Automatic password rotation is an explicit form option, disabled by default for initial testing.
 
@@ -32,7 +32,7 @@ flowchart TD
     Vault["OCI Vault / Secret Service"]
     App["Your application"]
     Journal["Object Storage recovery journal"]
-    Monitor["OCI Resource Scheduler<br/>Every 15 minutes"]
+    Monitor["OCI Resource Scheduler<br/>Every hour"]
     Logs["OCI Logging and Monitoring"]
     Alerts["Optional alarms and notifications"]
 
@@ -56,14 +56,14 @@ For each rotation, the Function saves a pending credential in Vault, updates the
 
 The Function uses an OCI resource principal with IAM policies scoped to the selected secret and recovery journal. Database connections use verified TLS and require the private network access described in the [deployment guide](DEPLOYMENT.md).
 
-**Two schedules serve different purposes:** OCI Vault controls automatic password rotation, enabled after testing. The deployed 15-minute Resource Scheduler job checks rotation health and does not change passwords. See [architecture details](docs/architecture.md) for recovery and operational considerations.
+**Two schedules serve different purposes:** OCI Vault controls automatic password rotation, enabled after testing. The deployed hourly Resource Scheduler job checks rotation health and does not change passwords. See [architecture details](docs/architecture.md) for recovery and operational considerations.
 
 ## What deployment creates
 
 | Component | What it does | Deployment behavior |
 |---|---|---|
 | OCI Function and application | Update the database password, verify it and update the Vault secret | Resource Manager builds/publishes the image; the CLI path uses your prebuilt image |
-| Monitoring schedule | Invoke the Function every 15 minutes to report rotation health | Created and enabled; these checks do not change passwords |
+| Monitoring schedule | Invoke the Function every hour to report rotation health | Created and enabled; these checks do not change passwords |
 | IAM policies and dynamic groups | Allow the Function to access the selected secret and recovery journal | Created |
 | Private, versioned journal bucket | Record progress so interrupted rotations can be resumed | Created by default; an existing bucket can be used |
 | Invocation logs | Help operators track execution and investigate failures | Created and enabled |

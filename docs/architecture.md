@@ -10,7 +10,7 @@ Vault native scheduler -> resource-principal Function -> private PostgreSQL
                               |
                      Object Storage CAS journal
 
-Resource Scheduler (15 min) -> Function monitor action -> metrics -> alarms / topic
+Resource Scheduler (hourly) -> Function monitor action -> metrics -> alarms / topic
 ```
 
 The database credential and Vault promotion cannot commit atomically. The journal records an operation before creating a version, and uses the operation UUID as its version name. It records the pending version before updating PostgreSQL. A retry first probes that exact pending credential, then the old credential. A successful pending login proves an interrupted update completed. Promotion checks the expected Vault current version using an ETag. No automatic password rollback is attempted.

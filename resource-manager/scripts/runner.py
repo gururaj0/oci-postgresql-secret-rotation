@@ -19,8 +19,12 @@ class DeploymentError(RuntimeError):
     pass
 
 
-def run(args, *, env=None, stdin=None):
+def run(args, *, env=None, stdin=None, build_output=False):
     result = subprocess.run(args, input=stdin, text=True, capture_output=True, env=env)
+    if build_output:
+        # The allowlisted build context contains source + public CA only. This runs
+        # before registry login and receives no build secrets or credential args.
+        print((result.stdout + result.stderr)[-12000:], flush=True)
     if result.returncode:
         # CLI errors can include signed request headers. Do not propagate them.
         raise DeploymentError("Command failed: " + " ".join(args[:3]) + "; inspect permissions and connectivity")
@@ -68,8 +72,9 @@ def build():
         env = os.environ.copy()
         env["DOCKER_CONFIG"] = str(root / "docker-config")
         Path(env["DOCKER_CONFIG"]).mkdir(mode=0o700)
+        env["REGISTRY_AUTH_FILE"] = str(root / "docker-config/auth.json")
         print("Building the Function image (this can take several minutes)", flush=True)
-        run(["docker", "build", "--platform", "linux/amd64", "-t", image, str(context)], env=env)
+        run(["docker", "build", "-t", image, str(context)], env=env, build_output=True)
         # Signed OCI request exchanges runner identity for short-lived registry auth.
         # The token never enters Terraform variables/state, command arguments or logs.
         data, _ = raw("GET", "https://" + registry + "/20180419/docker/token")
@@ -80,6 +85,35 @@ def build():
         print("Publishing the image to the tenancy's private OCIR repository", flush=True)
         run(["docker", "push", image], env=env)
     print("Image published; Terraform will resolve and pin its digest", flush=True)
+
+
+def image_shape(architecture):
+    shapes = {"arm64": "GENERIC_ARM", "amd64": "GENERIC_X86"}
+    if architecture not in shapes:
+        raise DeploymentError("Image architecture is not supported by OCI Functions")
+    return shapes[architecture]
+
+
+def inspect_image():
+    # External data source: read immutable image metadata; never modify cloud resources.
+    query = json.load(sys.stdin)
+    os.environ["ROTATION_REGION"] = query["region"]
+    image = query["image"]
+    registry = image.split("/", 1)[0]
+    if not re.fullmatch(r"[a-z0-9-]+\.ocir\.io", registry) or not re.search(r"@sha256:[a-f0-9]{64}$", image):
+        raise DeploymentError("Expected a digest-pinned OCIR image")
+    with tempfile.TemporaryDirectory(prefix="rotation-inspect-") as temp:
+        env = os.environ.copy()
+        env["DOCKER_CONFIG"] = temp
+        env["REGISTRY_AUTH_FILE"] = str(Path(temp) / "auth.json")
+        data, _ = raw("GET", "https://" + registry + "/20180419/docker/token")
+        token = data.get("token") if isinstance(data, dict) else None
+        if not token:
+            raise DeploymentError("OCIR did not return a temporary registry token")
+        run(["docker", "login", registry, "--username", "BEARER_TOKEN", "--password-stdin"], env=env, stdin=token)
+        run(["docker", "pull", image], env=env)
+        architecture = run(["docker", "image", "inspect", image, "--format", "{{.Architecture}}"], env=env).strip()
+    print(json.dumps({"architecture": architecture, "shape": image_shape(architecture)}))
 
 
 def desired_config(function_id, days, enabled):
@@ -144,7 +178,7 @@ def configure():
 
 if __name__ == "__main__":
     try:
-        {"build": build, "configure": configure}[sys.argv[1]]()
+        {"build": build, "configure": configure, "inspect": inspect_image}[sys.argv[1]]()
     except Exception as exc:
         # Do not emit exception objects from SDK/CLI or subprocesses.
         message = str(exc) if isinstance(exc, DeploymentError) else type(exc).__name__

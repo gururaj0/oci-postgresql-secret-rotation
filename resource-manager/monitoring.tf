@@ -4,13 +4,14 @@ resource "oci_resource_scheduler_schedule" "monitor" {
   display_name       = "${var.name}-monitor"
   action             = "START_RESOURCE"
   recurrence_type    = "CRON"
-  recurrence_details = "*/15 * * * *"
+  recurrence_details = "0 * * * *"
   state              = "ACTIVE"
   resources {
     id = module.function.id
     parameters {
       parameter_type = "BODY"
-      value          = [jsonencode({ action = "monitor" })]
+      # Scheduler stores BODY as JSON text; encode that string for provider 9.9.0.
+      value = [jsonencode(jsonencode({ action = "monitor" }))]
     }
   }
 }

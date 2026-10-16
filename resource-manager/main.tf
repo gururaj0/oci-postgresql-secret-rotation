@@ -1,6 +1,10 @@
 terraform {
   required_version = ">= 1.5.0, < 2.0.0"
   required_providers {
+    external = {
+      source  = "hashicorp/external"
+      version = "2.3.5"
+    }
     oci = {
       source  = "oracle/oci"
       version = "9.9.0"
@@ -81,6 +85,13 @@ data "oci_artifacts_container_images" "built" {
   version        = local.image_tag
   depends_on     = [terraform_data.image]
 }
+data "external" "image_architecture" {
+  program = ["python3", "${path.module}/scripts/runner.py", "inspect"]
+  query = {
+    region = var.region
+    image  = local.pinned_image
+  }
+}
 locals {
   image_digest = one(data.oci_artifacts_container_images.built.container_image_collection[0].items).digest
   pinned_image = "${local.image}@${local.image_digest}"
@@ -154,6 +165,7 @@ module "function" {
   subnet_id                  = var.subnet_id
   image                      = local.pinned_image
   config                     = local.config
+  shape                      = data.external.image_architecture.result.shape
   network_security_group_ids = [oci_core_network_security_group.function.id]
   depends_on                 = [oci_identity_policy.image_pull]
 }
