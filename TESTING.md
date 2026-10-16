@@ -52,7 +52,7 @@ The acceptance harness checks dry-run nonmutation, lock contention, an injected 
 
 Invoke `{"action":"validate"}` from an authorized operator. Then test the four documented callbacks and confirm the final version authenticates. Direct callback success does not prove Secret Service orchestration.
 
-For native acceptance, record CURRENT, select Rotate in Console, observe the callback logs and require a newer CURRENT, COMPLETE journal and fresh login. Version 0.1.1 passed this native test with scheduling disabled, advancing CURRENT from 5 to 6. Earlier versions returned `currentVersionNo` instead of the required `versionNo` and stalled after VERIFY_CONNECTION; the exact response-field contract is now regression-tested. Periodic execution, a real Function hard-kill recovery drill, notification delivery and the customer's connection-pool refresh still require acceptance.
+For native acceptance, record CURRENT, select Rotate in Console, observe the callback logs and require a newer CURRENT, COMPLETE journal and fresh login. Manual rotation through OCI Secret Service passed with scheduling disabled: the password and secret were updated and a fresh database login succeeded. Repeat these checks in your own environment. Periodic execution, a real Function hard-kill recovery drill, notification delivery and the customer's connection-pool refresh still require acceptance.
 
 ## Security and release checks
 

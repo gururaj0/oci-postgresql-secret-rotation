@@ -1,6 +1,10 @@
 # Deployment guide
 
-This is an application-role rotation implementation candidate. Local rotation and directly invoked OCI Function callbacks were tested against PostgreSQL 17. Native Secret Service/Console rotation passed end-to-end in version 0.1.1 with periodic scheduling disabled. Complete scheduled-run and application acceptance before enabling unattended rotation. See [validation](docs/validation.md) and [security findings](SECURITY.md).
+Deploy the rotation Function and monitoring resources into your OCI tenancy, verify a manual password rotation, then enable automatic password rotation when your application is ready.
+
+The standard Terraform deployment creates the Function, its application, IAM policies, invocation logs, a journal bucket by default, and an active monitoring schedule that runs every 15 minutes. Alarms are included when a Notifications topic is configured. Automatic password rotation is activated separately through OCI Vault in the final step below.
+
+Manual rotation has been tested successfully against PostgreSQL 17. Follow the [testing guide](TESTING.md) and review [security findings](SECURITY.md) before production use.
 
 ## Prerequisites
 
@@ -60,8 +64,30 @@ The existing subnet must provide OCI API access and PostgreSQL connectivity. The
 
 Set `function_id` from Terraform output and invoke the Function with `{"action":"validate"}` to verify resource-principal access and TLS authentication. Complete the [testing guide](TESTING.md) before enabling automation.
 
-## Console and scheduling
+## Enable automatic password rotation
 
-See [Console rotation](docs/console-rotation.md) for Function-target binding and native acceptance checks. Keep automatic rotation disabled until your own native and application acceptance passes. The `schedule --confirm` command enables periodic rotation; `unschedule --confirm` disables it. Do not treat an accepted Rotate request as proof of password rotation: confirm a newer CURRENT version, a COMPLETE journal and a fresh successful database login.
+After deployment, record the Function OCID from `terraform output function_id` (run from the `terraform` directory) in the `function_id` field of `rotation.function.yaml`. Set `rotation_days` to your required interval; the CLI accepts 1–360 days.
+
+Complete manual rotation and application credential-refresh testing first. Then run:
+
+```bash
+pg-vault-rotation --config rotation.function.yaml schedule --confirm
+pg-vault-rotation --config rotation.function.yaml status
+```
+
+The schedule command validates the deployed Function, links it to the selected Vault secret and enables OCI Vault's native rotation schedule. Check the reported next scheduled time and observe the first scheduled rotation. This step does not create another Resource Scheduler job: Vault controls the password-rotation interval.
+
+To disable automatic password rotation:
+
+```bash
+pg-vault-rotation --config rotation.function.yaml unschedule --confirm
+pg-vault-rotation --config rotation.function.yaml status
+```
+
+The 15-minute monitoring schedule remains active. To change the password-rotation interval, update `rotation_days` and rerun `schedule --confirm`.
+
+## Rotate on demand
+
+Once the secret is linked to the Function, select **Rotate** on its OCI Console details page. Verify that the secret has a newer CURRENT version and that your application can open a new database connection. See [Console rotation](docs/console-rotation.md) for manual-only configuration and [Testing](TESTING.md) for acceptance checks.
 
 See [recovery](docs/recovery-runbook.md), [operations](docs/operations.md), and [IAM](docs/iam-policies.md) before operational handoff.

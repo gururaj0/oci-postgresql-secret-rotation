@@ -1,54 +1,64 @@
-# OCI PostgreSQL secret rotation
+# PostgreSQL password rotation with OCI Vault
 
-Customer-operated Python CLI, OCI Function, and Terraform modules for application-role credential rotation with OCI Vault. It uses publicly documented interfaces. It is a custom integration, not an Oracle-managed service, and carries no separate Oracle product SLA.
+Keep an application’s PostgreSQL password and its OCI Vault secret in sync. Rotate credentials on demand or configure automatic rotation, and verify the new password before making it available to applications.
+
+This package includes the rotation Function, infrastructure deployment, configuration tools, testing instructions and recovery procedures.
+
+## What you can do
+
+- Rotate an application database password through OCI Secret Service or the included CLI.
+- Enable automatic rotation at your chosen interval after testing your application.
+- Keep credentials in Vault and connect to PostgreSQL using verified TLS.
+- Monitor rotation health and resume an interrupted rotation using its recorded progress.
+
+Manual rotation through OCI Secret Service has been tested successfully: it updates the PostgreSQL password and Vault secret, then verifies a new database connection.
+
+## What deployment creates
+
+| Component | What it does | Deployment behavior |
+|---|---|---|
+| OCI Function and application | Update the database password, verify it and update the Vault secret | Created from the image you build and publish |
+| Monitoring schedule | Invoke the Function every 15 minutes to report rotation health | Created and enabled; these checks do not change passwords |
+| IAM policies and dynamic groups | Allow the Function to access the selected secret and recovery journal | Created |
+| Private, versioned journal bucket | Record progress so interrupted rotations can be resumed | Created by default; an existing bucket can be used |
+| Invocation logs | Help operators track execution and investigate failures | Created and enabled |
+| Monitoring alarms | Report failures, overdue rotation and missing monitoring activity | Created when you provide a Notifications topic |
+| Automatic password-rotation schedule | Have OCI Vault invoke the Function at the configured interval | Enabled separately after validation with `schedule --confirm` |
+
+Use an existing PostgreSQL database, application role, credential secret and suitable private subnet. Follow the deployment guide to build the container image, configure database access and supply the trusted CA certificate.
+
+## Get started
+
+1. Follow [Deployment](DEPLOYMENT.md) to install the tools, configure your target, build the image and deploy the resources.
+2. Follow [Testing](TESTING.md) to verify manual rotation and confirm your application refreshes credentials for new connections.
+3. Set `function_id` from the deployment output and choose `rotation_days` in your configuration. Enable automatic password rotation when ready:
+
+```bash
+pg-vault-rotation --config rotation.function.yaml schedule --confirm
+pg-vault-rotation --config rotation.function.yaml status
+```
+
+To stop automatic password rotation:
+
+```bash
+pg-vault-rotation --config rotation.function.yaml unschedule --confirm
+```
+
+Disabling password rotation leaves the monitoring schedule running. For on-demand use, see [Console rotation](docs/console-rotation.md).
+
+## Before production use
+
+This release supports one application login role. Managed-administrator rotation and alternating-user rotation are not supported. Applications must refresh their cached Vault credentials for new connections; existing database sessions can remain open.
+
+This is a prerelease. Validate scheduled execution, application connection-pool behavior, notifications and recovery in your environment. Review the outstanding container security findings in [SECURITY.md](SECURITY.md) before production deployment.
 
 ## Documentation
 
 - [Deployment instructions](DEPLOYMENT.md)
 - [Testing and acceptance](TESTING.md)
 - [Console rotation](docs/console-rotation.md)
-- [Security](SECURITY.md) and [recovery](docs/recovery-runbook.md)
+- [Operations](docs/operations.md) and [recovery](docs/recovery-runbook.md)
+- [Validation results](docs/validation.md) and [customer handoff](docs/customer-handoff.md)
+- [Architecture](docs/architecture.md) and [change history](CHANGELOG.md)
 
-**Version 0.1.1:** native Console/API rotation passed end-to-end with scheduling disabled. This remains a prerelease pending scheduled-run, customer application and production security acceptance.
-
-## What is implemented
-
-- Read-only, paginated discovery across subscribed regions and accessible compartments, including partial-access errors.
-- Guided resource selection, verified TLS, secure terminal-only credential bootstrap, manual rotation and dry-run validation.
-- Pending Vault versions, SQL identifier quoting, client-generated SCRAM verifiers, new-login verification, and conditional promotion.
-- Durable Object Storage operation journal and atomic, non-expiring per-role lock, shared by local and Function executions.
-- OCI Vault's four-step custom Function protocol and its native 1–360 day scheduler.
-- Private Functions, restricted IAM, optional new Vault/key, logs, failure/overdue alarms, and an independent 15-minute monitoring schedule.
-- Explicit recovery, failure injection tests, customer acceptance procedures and handoff documentation.
-
-## Quick start
-
-Requires Python 3.11+, OCI CLI default authentication, Terraform 1.6+, an OCI-compatible container build tool, OCIR access, and a deployment host with private connectivity to the database. Python 3.12 is the Function image baseline.
-
-```bash
-./install.sh
-source .venv/bin/activate
-pg-vault-rotation discover
-pg-vault-rotation configure
-pg-vault-rotation validate
-pg-vault-rotation plan
-# Review the complete plan and the identified tenancy/database/role first.
-pg-vault-rotation deploy --confirm
-pg-vault-rotation rotate --dry-run
-pg-vault-rotation rotate --confirm
-pg-vault-rotation status
-```
-
-Global `--config` and `--profile` options precede the subcommand. For example, `pg-vault-rotation --config customer.yaml status`.
-
-Build/push the Function image as described in [installation](docs/installation.md). After deployment set `function_id` from the Terraform output. Validate application credential refresh, then enable the Vault schedule with `pg-vault-rotation schedule --confirm`. Deployment alone does not enable credential rotation.
-
-## Validation and release status
-
-The approved demo application-role rotation passed against OCI PostgreSQL 17 and Vault: repeated rotations, lock contention, interrupted promotion, same-operation recovery, surviving existing sessions and fresh CURRENT logins. The initial 34-test suite passed with live integration enabled. The current 37-test local suite passes with one opt-in private-network integration skip. See [validation evidence](docs/validation.md).
-
-The delivery includes a resolved hashed dependency lock and Terraform provider lock. Clean installation, Ruff, dependency audit (no known vulnerabilities) and Terraform provider validation passed. The demo Function is now deployed and its resource-principal validation and four direct callbacks passed. Native Console/API rotation now passes: the Function returns the required `versionNo` response field, the service completes all four callbacks, and CURRENT authenticates a fresh TLS login. Container scanning retains unresolved OS findings. Periodic scheduled execution, notification delivery, a real Function hard-kill drill and customer application pool refresh remain acceptance gates. See [Console rotation](docs/console-rotation.md).
-
-Administrator rotation is deliberately disabled. The public reset API exists, but it needs separate asynchronous work-request, recovery and production-approval tests. Alternating-user rotation is also gated until role grants and application username refresh are validated. This release supports self-rotation of one application role; it does not promise uninterrupted new connections between password update and secret promotion.
-
-See [architecture and API evidence](docs/architecture.md), [recovery](docs/recovery-runbook.md), [operations](docs/operations.md), and the [customer handoff and acceptance matrix](docs/customer-handoff.md).
+The customer operates this custom integration in their tenancy; it carries no separate Oracle product SLA.

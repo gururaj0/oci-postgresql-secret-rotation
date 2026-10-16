@@ -20,8 +20,8 @@ The Function exposes the four native callbacks: VERIFY_CONNECTION, CREATE_PENDIN
 
 Do not run local rotation concurrently with a service-driven rotation. If an invocation is interrupted, inspect the journal and use the recovery runbook; never delete the pending version or reset the journal.
 
-## Version 0.1.1 native acceptance
+## Validation status
 
-Native Rotate completed all four callbacks with automatic rotation disabled. CURRENT advanced from 5 to 6, the journal reached COMPLETE, and an independent Function validation opened a fresh TLS login with CURRENT. The same Rotate API is used by the Console button; this was an API-level test, not a browser click test.
+Manual rotation through OCI Secret Service has been tested successfully with automatic scheduling disabled. The database password and Vault secret were updated, and a new database connection succeeded. See [validation results](validation.md) for the test method and [change history](../CHANGELOG.md) for implementation details.
 
-The version 0.1.0 response used `currentVersionNo`, which the native orchestrator did not consume. Version 0.1.1 returns `versionNo`, matching the reference Function's output model. Input still accepts either spelling for compatibility. Scheduling was not the cause of the earlier stall and remains disabled after the successful test.
+Before enabling a schedule, test the complete flow and your application's credential refresh in your own environment.
